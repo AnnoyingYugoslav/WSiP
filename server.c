@@ -18,7 +18,7 @@ bool serch(char text[50], int file){
     switch(file){
         case 1: //patrz, czy jest temat
             char filename[50];
-            snprintf(filename, sizeof(filename), "user/%s", text);
+            snprintf(filename, sizeof(filename), "text/%s", text);
             int fd = open(filename, O_RDONLY);
             if (fd == -1) {
                 return false;
@@ -37,7 +37,7 @@ bool serch(char text[50], int file){
             return true;
             break;
         default:
-            return NULL;
+            return true;
     }
 }
 
