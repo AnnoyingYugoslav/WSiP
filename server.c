@@ -73,8 +73,130 @@ int search(char text[50], int file) {
     }
 }
 
-void sendtosub(char text[]){ //asynchroniczne
-
+int substotopic(char who[], char what[]){
+    chdir("user");
+    const char sub[] = "sub";
+    int subsize = sizeof(sub) + sizeof(who);
+    char result[subsize]; // sub + adress
+    strcpy(result, sub);
+    strcat(result, who);
+    int pd = open(result, O_RDONLY);
+    char reed[50];
+    char c;
+    int counter = 1;
+    while(1){
+        read(pd, &c, 1);
+        if(c == '\n'){
+            reed[counter] = '\0';
+            if(strcmp(what, reed) == 0){
+                close(pd);
+                chdir("..");
+                return 1;
+            }
+            else{
+                counter = 0;
+                memset(reed, '\0', sizeof(reed));
+            }
+        }
+        else if(c == '\0'){
+            close(pd);
+            chdir("..");
+            return 0;
+        }
+        else{
+            reed[counter] = c;
+            counter++;
+        }
+    }
+    close(pd);
+    chdir("..");
+    return 0;
+}
+int notbanned(char who[], char whom[]){
+    chdir("user");
+    const char sub[] = "ban";
+    int subsize = sizeof(sub) + sizeof(who);
+    char result[subsize]; // sub + adress
+    strcpy(result, sub);
+    strcat(result, who);
+    int pd = open(result, O_RDONLY);
+    char reed[50];
+    char c;
+    int counter = 1;
+    while(1){
+        read(pd, &c, 1);
+        if(c == '\n'){
+            reed[counter] = '\0';
+            if(strcmp(whom, reed) == 0){
+                close(pd);
+                chdir("..");
+                return 0;
+            }
+            else{
+                counter = 0;
+                memset(reed, '\0', sizeof(reed));
+            }
+        }
+        else if(c == '\0'){
+            close(pd);
+            chdir("..");
+            return 1;
+        }
+        else{
+            reed[counter] = c;
+            counter++;
+        }
+    }
+    close(pd);
+    chdir("..");
+    return 1;
+}
+void sendtosub(char text[], char name[], char msg[]){ //asynchroniczne
+    const char users[] = "users";
+    int pd = open(users, O_RDONLY);
+    char address[30];
+    char c;
+    int counter = 0;
+    int notdone = 1;
+    int switcher = 1;
+    const char newl = '\n';
+    while(notdone){
+        read(pd, &c, 1);
+        if(c == '\n'){
+            if(switcher){
+                address[counter] = '\0';
+                if(substotopic(address, text)){
+                    if(notbanned(address, name)){
+                        int smsg = sizeof(text) + sizeof(msg) + 1;
+                        char cmplmsg[smsg];
+                        strcpy(cmplmsg, name);
+                        strcat(cmplmsg, &newl);
+                        strcat(cmplmsg, msg);
+                        snd.type = 12;
+                        snd.num = 0;
+                        strcpy(snd.text, cmplmsg);
+                        msgsnd(atoi(address), &snd, sizeof(snd), 0);
+                    }
+                }
+                counter = 0;
+                memset(address, '\0', sizeof(address));
+                switcher = 0;
+            }
+            else{
+                counter = 0;
+                memset(address, '\0', sizeof(address));
+                switcher = 1;
+            }
+        }
+        else if(c == '\0'){
+            close(pd);
+            return;
+        }
+        else{
+            address[counter] = c;
+            counter++;
+        }
+    }
 }
 
 
@@ -118,7 +240,6 @@ void login(char name[], int address) {
     }
 
     msgsnd(address, &snd, sizeof(snd), 0);
-    msgctl(address, IPC_RMID, NULL);
 }
 
 void logout(char name[], int address){
@@ -150,7 +271,6 @@ void logout(char name[], int address){
                 printf("Error in logout")
                 snd.type = 2;
                 msgsnd(address, &snd, sizeof(snd), 0);
-                msgctl(address, IPC_RMID, NULL);
                 return;
             }
             else{
@@ -186,7 +306,6 @@ void logout(char name[], int address){
         snd.type = 2;
     }
     msgsnd(address, &snd, sizeof(snd), 0);
-    msgctl(address, IPC_RMID, NULL);
 }
 void addtopic(char title[], char text[], int address, int pro){
     char buf[30];
@@ -278,7 +397,7 @@ void addtopic(char title[], char text[], int address, int pro){
             close(pd);
             chdir("..");
             snd.type = 4;
-            sendtosub(title);
+            sendtosub(title, name);
         }
         else{ //jeśli nie ma
             const char topics[] = "topics";
@@ -306,7 +425,6 @@ void addtopic(char title[], char text[], int address, int pro){
         snd.type = 6;
     }
     msgsnd(address, &snd, sizeof(snd), 0);
-    msgctl(address, IPC_RMID, NULL);
 }
 void addsub(char test[], int address){
     char buf[30];
@@ -338,7 +456,6 @@ void addsub(char test[], int address){
         snd.type = 14;
     }
     msgsnd(address, &snd, sizeof(snd), 0);
-    msgctl(address, IPC_RMID, NULL);
 }
 void blockuser(char test[], int address){
     char buf[30];
@@ -370,23 +487,72 @@ void blockuser(char test[], int address){
         snd.type = 14;
     }
     msgsnd(address, &snd, sizeof(snd), 0);
-    msgctl(address, IPC_RMID, NULL);
 }
 void senderr(int address){
     snd.type = 12;
     msgsnd(address, &snd, sizeof(snd), 0);
-    msgctl(address, IPC_RMID, NULL);
 }
+
 
 void getmsg(char text[], int num, int address){ //synchroniczne
-
+    chdir("text");
+    int pd = open(text, O_RDONLY);
+    int counter = 0;
+    int counter2 = 0;
+    char c;
+    char name[50];
+    char reed[256];
+    int whatread = 0;
+    while((counter2 < num) && !(c == '\0')){
+        read(pd, &c, 1);
+        if(c == '&'){
+            whatread = 1; //czuytamy imie
+        }
+        if(whatread == 1){
+            if(c == '\n'){
+                name[counter] = '\0';
+                counter = 0;
+                whatread = 2; //czytamy wiadomość
+            }
+            else{
+                name[counter] = c;
+                counter++;
+            }
+        }
+        if(whatread == 2){
+            if(c == '#' && !(counter2 = num)){ // koniec tego tematu
+                reed[counter] = '\0';
+                counter = 0;
+                snd.type = 12;
+                snd.num = 1;
+                strcpy(snd.text, reed);
+                msgsnd(atoi(address), &snd, sizeof(snd), 0);
+                counter2++;
+                memset(reed, '\0', sizeof(reed));
+            }
+            else if((c == '#' && !(counter2 = num)) || (c == '/0')){
+                reed[counter] = '\0';
+                snd.type = 12;
+                snd.num = 0;
+                strcpy(snd.text, reed);
+                msgsnd(atoi(address), &snd, sizeof(snd), 0);
+            }
+            else{
+                reed[counter] = c;
+                counter ++;
+            }
+        }
+    }
+    close(pd);
+    chdir("..");
 }
 
-struct msgbuf {
+struct msgbuf1 {
         long type;
         char text[256];
         int num;
 }snd;
+
 struct msgbuf {
         long type;
         int address;
