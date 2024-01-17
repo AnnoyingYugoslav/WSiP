@@ -1,22 +1,19 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <fcntl.h>
+#include <string.h>
+#include <unistd.h>
 #include <sys/ipc.h>
 #include <sys/msg.h>
 #include <sys/types.h>
-#include <unistd.h>
 
 #define KEY 22342
 
-int newadress(){
-    int adress;
-    //check existing
-    return adress;
-}
-
-bool serch(char text[50], int file){
-    switch(file){
-        case 1: //patrz, czy jest temat
+bool search(char text[50], int file) {
+    switch(file) {
+        case 1: // patrz, czy jest temat
+        {
             char filename[50];
             snprintf(filename, sizeof(filename), "text/%s", text);
             int fd = open(filename, O_RDONLY);
@@ -25,8 +22,9 @@ bool serch(char text[50], int file){
             }
             close(fd);
             return true;
-            break;
-        case 2: //patrz, czy jest użytkownik
+        }
+        case 2: // patrz, czy jest użytkownik
+        {
             char filename[50];
             snprintf(filename, sizeof(filename), "user/ban%s", text);
             int fd = open(filename, O_RDONLY);
@@ -35,35 +33,117 @@ bool serch(char text[50], int file){
             }
             close(fd);
             return true;
-            break;
+        }
         default:
             return true;
     }
 }
 
-void login(char name[50], int address){
-    if(!search(name, 2)){
-        //make new file banname and subname
+
+
+void login(char name[50], int address) {
+    char buf[30];
+    address = address + KEY; //Key - stala duża liczba
+    snprintf(buf, sizeof(buf), "%d", address);
+    if (!search(buf, 2)) {
+        //add adress + name to users
+        const char[] users = "users";
+        const char[] newline = "\n";
+        int pd = open(users, O_WRONLY);
+        lseek(pd, 0, SEEK_END);
+        write(pd, buf, strlen(buf));
+        write(pd, newline, strlen(newline));
+        write(pd, name, strlen(name));
+        write(pd, newline, strlen(newline));
+        close(pd);
+        // make new file banname and subname
         chdir("user");
         const char sub[] = "sub";
         const char ban[] = "ban";
-        int subsize = sizeof(sub) + sizeof(name);
-        int bansize = sizeof(ban) + sizeof(name);
+        int subsize = sizeof(sub) + sizeof(buf);
+        int bansize = sizeof(ban) + sizeof(buf);
+        char result[subsize]; // sub + adress
+        char result2[bansize]; // ban + adress
+        strcpy(result, sub);
+        strcat(result, buf);
+        strcpy(result2, ban);
+        strcat(result2, buf);
+        int file = creat(result, 0777);
+        close(file);
+        file = creat(result2, 0777);
+        snd.type = 1;
+        strcat(buf, "\n");
+        write(file, name, strlen(name));
+        close(file);
+        chdir("..");
+    } else {
+        snd.type = 2;
+    }
+
+    msgsnd(address, &snd, sizeof(snd), 0);
+    msgctl(address, IPC_RMID, NULL);
+}
+
+void logout(char name[50], int address){
+    //remove adress and name
+    char buf[30];
+    address = address + KEY; //Key - stala duża liczba
+    snprintf(buf, sizeof(buf), "%d", address);
+    if(search(buf, 2)){
+        const char[] users = "users";
+        const char[] newline = "\n";
+        int pd = open(users, O_RDWR);
+        char reader[50];
+        int notdone = 1;
+        int counter = 0;
+        char c;
+        while(notdone){
+            read(pd, *c, 1);
+            if(c == '\n'){
+                reader[counter] == '\0';
+                if(strcmp(buf, reader)){
+                    notdone = 0;
+                }
+                else{
+                    counter = 0;
+                    memset(reader, '\0', sizeof(reader));
+                }
+            }
+            else if(c == '\0'){
+                printf("Error in logout")
+                snd.type = 2;
+                msgsnd(address, &snd, sizeof(snd), 0);
+                msgctl(address, IPC_RMID, NULL);
+                return;
+            }
+            else{
+                reader[counter] = c;
+                counter++;
+            }
+        }
+        lseek(fd, -counter, SEEK_CUR);
+        const char emp = '';
+        for(int i = 0; i < counter; i++){
+            write(pd, emp, 1);
+        }
+        for(int i = 0; i < (strlen(name) + 1); i++){
+            write(pd, emp, 1);
+        }
+        close(pd);
+        chdir("user");
+        const char sub[] = "sub";
+        const char ban[] = "ban";
+        int subsize = sizeof(sub) + sizeof(buf);
+        int bansize = sizeof(ban) + sizeof(buf);
         char result[subsize]; //sub + name
         char result2[bansize]; //ban + name
         strcpy(result, sub);
-        strcat(result, name);
+        strcat(result, buf);
         strcpy(result2, ban);
-        strcat(result2, name);
-        creat(result, 0777);
-        int file = creat(result2, 0644);
-        snd.type = 1;
-        address = adress + KEY;
-        char buf[30];
-        snprintf(buf, sizeof(buf), "%d", address);
-        strcat(buf, "\n");
-        write(file, buf, sizeof(buf));
-        chdir("..");
+        strcat(result2, buf);
+        remove(result);
+        remove(result2);
+        snd.type = 9;
     }
     else{
         snd.type = 2;
@@ -71,21 +151,21 @@ void login(char name[50], int address){
     msgsnd(address, &snd, sizeof(snd), 0);
     msgctl(address, IPC_RMID, NULL);
 }
+void addtopic(char title[], char[text], int address){
+    char buf[30];
+    address = address + KEY; //Key - stala duża liczba
+    snprintf(buf, sizeof(buf), "%d", address);
+    if(search(buf, 2)){
+        if(search(title, 1)){ //jeśli już jest temat
 
-void logout(char name[50]){
-    //remove adress and name
-    snd.type = 2;
-    msgsnd(address, &snd, sizeof(snd), 0);
-    msgctl(address, IPC_RMID, NULL);
-}
-void addtopic(){
+        }
+        else{ //jeśli nie ma
 
-}
-void addtext(){
-
+        }
+    }
 }
 void addsub(){
-
+    
 }
 void blockuser(){
     
@@ -127,6 +207,19 @@ int main(int argc, char* argv[]) {
         printf("Error creating user folder");
         return 1;
     }
+    int pd;
+    const char[] users = "users";
+    pd = creat(users, 0777);
+    if(pd == -1){
+        printf("Error creating list of users");
+        return 1;
+    }
+    const char[] topics = "topics";
+    pd = creat(topics, 0777);
+    if(pd == -1){
+        printf("Error creating list of topics");
+        return 1;
+    }
     while(1){
         msgrcv(msgid, &rec, sizeof(rec) - sizeof(long), 0, 0);
         if(!fork()){
@@ -135,13 +228,13 @@ int main(int argc, char* argv[]) {
                     login(rec.top, rec.address);
                     break;
                 case 2:
-                    logout();
+                    logout(rec.top, rec.address);
                     break;
                 case 3:
-                    addtopic();
+                    addtopic(rec.top, rec.text, rec.address);
                     break;
                 case 4:
-                    addtext();
+                    //addtext();
                     break;
                 case 5:
                     addsub();
