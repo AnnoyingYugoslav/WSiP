@@ -39,9 +39,12 @@ bool search(char text[50], int file) {
     }
 }
 
+void sendtosub(char text[]){
+    
+}
 
 
-void login(char name[50], int address) {
+void login(char name[], int address) {
     char buf[30];
     address = address + KEY; //Key - stala duża liczba
     snprintf(buf, sizeof(buf), "%d", address);
@@ -51,10 +54,10 @@ void login(char name[50], int address) {
         const char[] newline = "\n";
         int pd = open(users, O_WRONLY);
         lseek(pd, 0, SEEK_END);
-        write(pd, buf, strlen(buf));
-        write(pd, newline, strlen(newline));
-        write(pd, name, strlen(name));
-        write(pd, newline, strlen(newline));
+        write(pd, buf, sizeof(buf)-1);
+        write(pd, newline, sizeof(newline)-1);
+        write(pd, name, sizeof(name)-1);
+        write(pd, newline, sizeof(newline)-1);
         close(pd);
         // make new file banname and subname
         chdir("user");
@@ -84,7 +87,7 @@ void login(char name[50], int address) {
     msgctl(address, IPC_RMID, NULL);
 }
 
-void logout(char name[50], int address){
+void logout(char name[], int address){
     //remove adress and name
     char buf[30];
     address = address + KEY; //Key - stala duża liczba
@@ -151,21 +154,92 @@ void logout(char name[50], int address){
     msgsnd(address, &snd, sizeof(snd), 0);
     msgctl(address, IPC_RMID, NULL);
 }
-void addtopic(char title[], char[text], int address){
+void addtopic(char title[], char text[], int address, int pro){
     char buf[30];
     address = address + KEY; //Key - stala duża liczba
     snprintf(buf, sizeof(buf), "%d", address);
+    const char hash = '#';
+    const char app = '&';
+    const char newl = '\n';
+    char buf2[30];
+    const char tmp[] = "text";
+    snprintf(buf2, sizeof(buf2), "%d", pro);
     if(search(buf, 2)){
+        //get name
+        char name[] = ;
         if(search(title, 1)){ //jeśli już jest temat
-
+            chdir(tmp);
+            int pd = open(title, O_RDWR);
+            int notdone = 1;
+            char c;
+            char reader[50];
+            int counter;
+            int foundnumber = 0;
+            while(notdone){
+                read(pd, *c, 1);
+                if(foundnumber && !(c == '\n')){
+                    reader[counter] = c;
+                    counter++;
+                }
+                else{
+                    reader[counter] = '\0';
+                    foundnumber = atoi(reader);
+                    if(foundnumber >= pro){
+                        notdone = 0;
+                    }
+                    else{
+                        foundnumber = 0;
+                        counter = 0;
+                        memset(reader, '\0', sizeof(reader));
+                    }
+                }
+                if(c == '#'){
+                    foundnumber = 1;
+                }
+            }
+            lseek(pd, -(counter+1), SEEK_CUR);
+            write(pd, *hash, 1);
+            write(pd, buf2, sizeof(buf2)-1);
+            write(pd, *app, 1);
+            write(pd, name, sizeof(name)-1);
+            write(pd, *newl, 1);
+            write(pd, text, sizeof(text)-1);
+            write(pd, *newl, 1);
+            close(pd);
+            chdir("..");
+            snd.type = 4;
+            sendtosub(title);
         }
         else{ //jeśli nie ma
-
+            const char topics[] = "topics";
+            chdir(tmp);
+            int pd = creat(title, 0777);
+            write(pd, *hash, 1);
+            write(pd, buf2, sizeof(buf2)-1);
+            write(pd, *app, 1);
+            write(pd, name, sizeof(name)-1);
+            write(pd, *newl, 1);
+            write(pd, text, sizeof(text)-1);
+            write(pd, *newl, 1);
+            close(pd);
+            snd.type = 5;
+            chdir("..");
+            //add to list of all topic
+            pd = open(topics, O_RDWR);
+            lseek(pd, 0, SEEK_END);
+            write(pd, title, sizeof(title) -1);
+            write(pd, *newl, 1);
+            close(pd);
         }
     }
+    else{
+        snd.type = 6;
+    }
+    msgsnd(address, &snd, sizeof(snd), 0);
+    msgctl(address, IPC_RMID, NULL);
 }
 void addsub(){
-    
+
 }
 void blockuser(){
     
@@ -185,6 +259,7 @@ int main(int argc, char* argv[]) {
     struct msgbuf2 rec {
         long type;
         int adress;
+        int pro; //prioriyty
         char top[50]; //topic or name
         char text[256];
     }
@@ -231,7 +306,7 @@ int main(int argc, char* argv[]) {
                     logout(rec.top, rec.address);
                     break;
                 case 3:
-                    addtopic(rec.top, rec.text, rec.address);
+                    addtopic(rec.top, rec.text, rec.address, rec.pro);
                     break;
                 case 4:
                     //addtext();
