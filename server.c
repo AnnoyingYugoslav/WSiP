@@ -204,7 +204,7 @@ void login(char name[], int address) {
     char buf[30];
     address = address + KEY; //Key - stala duża liczba
     snprintf(buf, sizeof(buf), "%d", address);
-    if (!search(buf, 2)) {
+    if (!search(name, 3)) {
         //add adress + name to users
         const char users[] = "users";
         const char newline[] = "\n";
@@ -496,6 +496,7 @@ void senderr(int address){
 
 void getmsg(char text[], int num, int address){ //synchroniczne
     chdir("text");
+    address = address + KEY;
     int pd = open(text, O_RDONLY);
     int counter = 0;
     int counter2 = 0;
@@ -545,6 +546,79 @@ void getmsg(char text[], int num, int address){ //synchroniczne
     }
     close(pd);
     chdir("..");
+}
+
+void givenames(int address){
+    address = address + KEY;
+    const char users[] = "users";
+    int pd = open(users, O_RDONLY);
+    char reader[50];
+    char c;
+    int notdone = 1;
+    int counter = 0;
+    int name = 0;
+    while(notdone){
+        read(pd, &c, 1);
+        if(c == '\n'){
+            if(name){
+                reader[counter] = '\0';
+                counter = 0;
+                snd.type = 16;
+                snd.num = 1;
+                strcpy(snd.text, reader);
+                msgsnd(atoi(address), &snd, sizeof(snd), 0);
+                memset(reader, '\0', sizeof(reader));
+                name = 0;
+            }
+            else{
+                name = 1;
+                counter = 0;
+                memset(reader, '\0', sizeof(reader));
+            }
+        }
+        else if(c == '\0'){
+            reader[counter] = '\0';
+            snd.type = 15;
+            snd.num = 0;
+            strcpy(snd.text, reader);
+            msgsnd(atoi(address), &snd, sizeof(snd), 0);
+        }
+        else{
+            reader[counter] = c;
+            counter++;
+        }
+    }
+}
+void givetopics(int address){
+    address = address + KEY;
+    const char topics[] = "topics";
+    int pd = open(topics, O_RDONLY);
+    char reader[50];
+    char c;
+    int notdone = 1;
+    int counter = 0;
+    while(notdone){
+        read(pd, &c, 1);
+        if(c == '\n'){
+            reader[counter] = '\0';
+            counter = 0;
+            snd.type = 16;
+            snd.num = 1;
+            strcpy(snd.text, reader);
+            msgsnd(atoi(address), &snd, sizeof(snd), 0);
+            memset(reader, '\0', sizeof(reader));
+        }
+        else if(c == '\0'){
+            snd.type = 16;
+            snd.num = 0;
+            strcpy(snd.text, reader);
+            msgsnd(atoi(address), &snd, sizeof(snd), 0);
+        }
+        else{
+            reader[counter] = c;
+            counter++;
+        }
+    }
 }
 
 struct msgbuf1 {
@@ -614,6 +688,12 @@ int main(int argc, char* argv[]) {
                     break;
                 case 6:
                     blockuser(rec.top, rec.pro);
+                    break;
+                case 7:
+                    givenames(rec.address);
+                    break;
+                case 8:
+                    givetopics(rec.address);
                     break;
                 default:
                     senderr(rec.address);
