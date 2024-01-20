@@ -44,7 +44,7 @@ int search(char text[], int file) {
         case 2: // patrz, czy jest użytkownik - by adress
         {
             const char ban[] = "ban"; 
-            int size = strlen(text) +sizeof(ban);
+            int size = strlen(text) +strlen(ban);
             char filename[size];
             chdir("user");
             strcpy(filename, ban);
@@ -237,10 +237,10 @@ void login(char name[], int address) {
         const char newline[] = "\n";
         int pd = open(users, O_WRONLY);
         lseek(pd, 0, SEEK_END);
-        write(pd, buf, sizeof(buf)-1);
-        write(pd, newline, sizeof(newline)-1);
+        write(pd, buf, strlen(buf));
+        write(pd, newline, strlen(newline));
         write(pd, name, strlen(name));
-        write(pd, newline, sizeof(newline)-1);
+        write(pd, newline, strlen(newline));
         close(pd);
         // make new file banname and subname
         chdir("user");
