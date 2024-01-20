@@ -51,6 +51,12 @@ int main(int argc, char* argv[]){
         printf("Rare error, restart program");
         return 1;
     }
+    //zaloguj sie
+
+
+
+    //test if zalogowano
+
     if(fork()){ //nasluch
         int msgid = msgget(me, 0666 | IPC_CREAT);
         while(1){
@@ -58,11 +64,55 @@ int main(int argc, char* argv[]){
         }
     }
     else{ //wysylanie
-        int msgsnd = msgget(SERVER, 0666);
+        int sndmsg = msgget(SERVER, 0666 | IPC_CREAT);
         helpinfo();
         login(name, me);
+        int n;
+        char input[100];
+        char inputlong[256];
+        char inputshort[50];
         while(1){
+            printf("Podaj numer polecenia do wykonania: ");
+            fgets(input, sizeof(input), stdin);
+            sscanf(input, "%d", &n);
+            switch(n){
+                case 1:
+                {
+                    snd.type = 2;
+                }
+                case 2:
+                {
+                    snd.type = 3;
+                }
+                case 3:
+                {
+                    snd.type = 5;
+                }
+                case 4:
+                {
+                    snd.type = 4;
+                }
+                case 5:
+                {
+                    snd.type = 6;
+                }
+                case 6:
+                {
+                    snd.type = 7;
+                    msgsnd(sndmsg, &snd, sizeof(snd), 0);
+                }
+                case 7:
+                {
+                    snd.type = 8;
+                    msgsnd(sndmsg, &snd, sizeof(snd), 0);
 
+                }
+                default:
+                {
+                    printf("Unkown command.\n");
+                    helpinfo();
+                }
+            }
         }
 
     }

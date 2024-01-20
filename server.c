@@ -175,7 +175,9 @@ void sendtosub(char text[], char name[], char msg[]){ //asynchroniczne
                         snd.type = 12;
                         snd.num = 0;
                         strcpy(snd.text, cmplmsg);
-                        msgsnd(atoi(address), &snd, sizeof(snd), 0);
+                        int send = msgget(atoi(address), 0666 | IPC_CREAT);
+                        msgsnd(send, &snd, sizeof(snd), 0);
+                        msgctl(send, IPC_RMID, NULL);
                     }
                 }
                 counter = 0;
@@ -238,8 +240,9 @@ void login(char name[], int address) {
     } else {
         snd.type = 2;
     }
-
-    msgsnd(address, &snd, sizeof(snd), 0);
+    int send = msgget(address, 0666 | IPC_CREAT);
+    msgsnd(send, &snd, sizeof(snd), 0);
+    msgctl(send, IPC_RMID, NULL);
 }
 
 void logout(char name[], int address){
@@ -270,7 +273,9 @@ void logout(char name[], int address){
             else if(c == '\0'){
                 printf("Error in logout")
                 snd.type = 2;
-                msgsnd(address, &snd, sizeof(snd), 0);
+                int send = msgget(address, 0666 | IPC_CREAT);
+                msgsnd(send, &snd, sizeof(snd), 0);
+                msgctl(send, IPC_RMID, NULL);
                 return;
             }
             else{
@@ -305,7 +310,9 @@ void logout(char name[], int address){
     else{
         snd.type = 2;
     }
-    msgsnd(address, &snd, sizeof(snd), 0);
+    int send = msgget(address, 0666 | IPC_CREAT);
+    msgsnd(send, &snd, sizeof(snd), 0);
+    msgctl(send, IPC_RMID, NULL);
 }
 void addtopic(char title[], char text[], int address, int pro){
     char buf[30];
@@ -424,7 +431,9 @@ void addtopic(char title[], char text[], int address, int pro){
     else{
         snd.type = 6;
     }
-    msgsnd(address, &snd, sizeof(snd), 0);
+    int send = msgget(address, 0666 | IPC_CREAT);
+    msgsnd(send, &snd, sizeof(snd), 0);
+    msgctl(send, IPC_RMID, NULL);
 }
 void addsub(char test[], int address){
     char buf[30];
@@ -455,7 +464,9 @@ void addsub(char test[], int address){
     else{
         snd.type = 14;
     }
-    msgsnd(address, &snd, sizeof(snd), 0);
+    int send = msgget(address, 0666 | IPC_CREAT);
+    msgsnd(send, &snd, sizeof(snd), 0);
+    msgctl(send, IPC_RMID, NULL);
 }
 void blockuser(char test[], int address){
     char buf[30];
@@ -486,11 +497,15 @@ void blockuser(char test[], int address){
     else{
         snd.type = 14;
     }
-    msgsnd(address, &snd, sizeof(snd), 0);
+    int send = msgget(address, 0666 | IPC_CREAT);
+    msgsnd(send, &snd, sizeof(snd), 0);
+    msgctl(send, IPC_RMID, NULL);
 }
 void senderr(int address){
     snd.type = 12;
-    msgsnd(address, &snd, sizeof(snd), 0);
+    int send = msgget(address, 0666 | IPC_CREAT);
+    msgsnd(send, &snd, sizeof(snd), 0);
+    msgctl(send, IPC_RMID, NULL);
 }
 
 
@@ -527,7 +542,9 @@ void getmsg(char text[], int num, int address){ //synchroniczne
                 snd.type = 12;
                 snd.num = 1;
                 strcpy(snd.text, reed);
-                msgsnd(atoi(address), &snd, sizeof(snd), 0);
+                int send = msgget(atoi(address), 0666 | IPC_CREAT);
+                msgsnd(send, &snd, sizeof(snd), 0);
+                msgctl(send, IPC_RMID, NULL);
                 counter2++;
                 memset(reed, '\0', sizeof(reed));
             }
@@ -536,7 +553,9 @@ void getmsg(char text[], int num, int address){ //synchroniczne
                 snd.type = 12;
                 snd.num = 0;
                 strcpy(snd.text, reed);
-                msgsnd(atoi(address), &snd, sizeof(snd), 0);
+                int send = msgget(atoi(address), 0666 | IPC_CREAT);
+                msgsnd(send, &snd, sizeof(snd), 0);
+                msgctl(send, IPC_RMID, NULL);
             }
             else{
                 reed[counter] = c;
@@ -566,7 +585,9 @@ void givenames(int address){
                 snd.type = 16;
                 snd.num = 1;
                 strcpy(snd.text, reader);
-                msgsnd(atoi(address), &snd, sizeof(snd), 0);
+                int send = msgget(atoi(address), 0666 | IPC_CREAT);
+                msgsnd(send, &snd, sizeof(snd), 0);
+                msgctl(send, IPC_RMID, NULL);
                 memset(reader, '\0', sizeof(reader));
                 name = 0;
             }
@@ -581,7 +602,10 @@ void givenames(int address){
             snd.type = 15;
             snd.num = 0;
             strcpy(snd.text, reader);
-            msgsnd(atoi(address), &snd, sizeof(snd), 0);
+            int send = msgget(atoi(address), 0666 | IPC_CREAT);
+            msgsnd(send, &snd, sizeof(snd), 0);
+            msgctl(send, IPC_RMID, NULL);
+            close(pd);
         }
         else{
             reader[counter] = c;
@@ -605,14 +629,19 @@ void givetopics(int address){
             snd.type = 16;
             snd.num = 1;
             strcpy(snd.text, reader);
-            msgsnd(atoi(address), &snd, sizeof(snd), 0);
+            int send = msgget(atoi(address), 0666 | IPC_CREAT);
+            msgsnd(send, &snd, sizeof(snd), 0);
+            msgctl(send, IPC_RMID, NULL);
             memset(reader, '\0', sizeof(reader));
         }
         else if(c == '\0'){
             snd.type = 16;
             snd.num = 0;
             strcpy(snd.text, reader);
-            msgsnd(atoi(address), &snd, sizeof(snd), 0);
+            int send = msgget(atoi(address), 0666 | IPC_CREAT);
+            msgsnd(send, &snd, sizeof(snd), 0);
+            msgctl(send, IPC_RMID, NULL);
+            close(pd);
         }
         else{
             reader[counter] = c;
