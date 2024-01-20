@@ -29,18 +29,31 @@ int search(char text[], int file) {
     switch(file) {
         case 1: // patrz, czy jest temat
         {   
-            int size = strlen(text);
-            char filename[size];
-            chdir("text");
-            strcpy(filename, text);
-            int fd = open(filename, O_RDONLY);
-            if (fd == -1) {
-                chdir("..");
-                return 0;
+            const char users[] = "topics";
+            int fd = open(users, O_RDONLY);
+            char reader[50];
+            char c;
+            int counter = 0;
+            int timeout = 0;
+            while(read(fd, &c, 1) > 0){
+                if(c == '\n'){
+                    reader[counter] = '\0';
+                    if(strstr(reader, text) != NULL){
+                        close(fd);
+                        return 1;
+                    }
+                    else{
+                        counter = 0;
+                        memset(reader, '\0', sizeof(reader)); 
+                    }
+                }
+                else{
+                    reader[counter] = c;
+                    counter++;
+                }
             }
             close(fd);
-            chdir("..");
-            return 1;
+            return 0;
         }
         case 2: // patrz, czy jest użytkownik - by adress
         {
@@ -51,13 +64,7 @@ int search(char text[], int file) {
             int counter = 0;
             int timeout = 0;
             while(read(fd, &c, 1) > 0){
-                read(fd, &c, 1);
-                timeout++;
-                if(c == '\0'){
-                    close(fd);
-                    return 0;
-                }
-                else if(c == '\n'){
+                if(c == '\n'){
                     reader[counter] = '\0';
                     if(strstr(reader, text) != NULL){
                         close(fd);
@@ -125,11 +132,11 @@ int substotopic(char who[], char what[]){
     char reed[50];
     char c;
     int counter = 1;
-    while(1){
+    while(read(pd, &c, 1) > 0){
         read(pd, &c, 1);
         if(c == '\n'){
             reed[counter] = '\0';
-            if(strcmp(what, reed) == 0){
+            if(strstr(what, reed) != NULL){
                 close(pd);
                 chdir("..");
                 return 1;
@@ -138,11 +145,6 @@ int substotopic(char who[], char what[]){
                 counter = 0;
                 memset(reed, '\0', sizeof(reed));
             }
-        }
-        else if(c == '\0'){
-            close(pd);
-            chdir("..");
-            return 0;
         }
         else{
             reed[counter] = c;
@@ -373,9 +375,9 @@ void addtopic(char title[], char text[], int address, int pro){
     char buf[30];
     address = address + KEY; //Key - stala duża liczba
     snprintf(buf, sizeof(buf), "%d", address);
-    const char hash = '#';
-    const char app = '&';
-    const char newl = '\n';
+    const char hash[] = "#";
+    const char app[] = "&";
+    const char newl[] = "\n";
     char buf2[30];
     const char tmp[] = "text";
     const char users[] = "users";
@@ -387,11 +389,10 @@ void addtopic(char title[], char text[], int address, int pro){
         char c;
         int counter2 = 0;
         int notdone = 1;
-        while(notdone){
-            read(fd, &c, 1);
+        while(notdone && (read(fd, &c, 1) > 0)){
             if(c == '\n'){
                 name[counter2] = '\0';
-                if(strcmp(name, buf) == 0){
+                if(strstr(name, buf) != NULL){
                     notdone = 0;
                 }
                 else{
@@ -426,8 +427,7 @@ void addtopic(char title[], char text[], int address, int pro){
             char reader[50];
             int counter;
             int foundnumber = 0;
-            while(notdone){
-                read(pd, &c, 1);
+            while(notdone && read(pd, &c, 1) > 0){
                 if(foundnumber && !(c == '\n')){
                     reader[counter] = c;
                     counter++;
@@ -449,13 +449,13 @@ void addtopic(char title[], char text[], int address, int pro){
                 }
             }
             lseek(pd, -(counter+1), SEEK_CUR);
-            write(pd, &hash, 1);
-            write(pd, buf2, sizeof(buf2)-1);
-            write(pd, &app, 1);
-            write(pd, name, strlen(name)-1);
-            write(pd, &newl, 1);
-            write(pd, text, strlen(text)-1);
-            write(pd, &newl, 1);
+            write(pd, hash, strlen(hash));
+            write(pd, buf2, strlen(buf2));
+            write(pd, app, strlen(app));
+            write(pd, name, strlen(name));
+            write(pd, newl, strlen(newl));
+            write(pd, text, strlen(text));
+            write(pd, newl, strlen(newl));
             close(pd);
             chdir("..");
             snd.type = 4;
@@ -466,13 +466,13 @@ void addtopic(char title[], char text[], int address, int pro){
             const char topics[] = "topics";
             chdir(tmp);
             int pd = creat(title, 0777);
-            write(pd, &hash, 1);
-            write(pd, buf2, sizeof(buf2)-1);
-            write(pd, &app, 1);
-            write(pd, name, strlen(name)-1);
-            write(pd, &newl, 1);
-            write(pd, text, strlen(text)-1);
-            write(pd, &newl, 1);
+            write(pd, hash, strlen(hash));
+            write(pd, buf2, strlen(buf2));
+            write(pd, app, strlen(app));
+            write(pd, name, strlen(name));
+            write(pd, newl, strlen(newl));
+            write(pd, text, strlen(text));
+            write(pd, newl, strlen(newl));
             close(pd);
             snd.type = 5;
             printf("topic added succesfully\n");
@@ -480,14 +480,14 @@ void addtopic(char title[], char text[], int address, int pro){
             //add to list of all topic
             pd = open(topics, O_RDWR);
             lseek(pd, 0, SEEK_END);
-            write(pd, title, strlen(title) -1);
+            write(pd, title, strlen(title));
             write(pd, &newl, 1);
             close(pd);
         }
     }
     else{
         snd.type = 6;
-        printf("topic adding failed\n");
+        printf("topic adding failed, %d not found\n", address);
     }
     int send = msgget(address, 0666 | IPC_CREAT);
     msgsnd(send, &snd, sizeof(snd), 0);
@@ -510,7 +510,7 @@ void addsub(char test[], int address){
             chdir(tmp);
             int pd = open(result, O_WRONLY);
             lseek(pd, 0, SEEK_END);
-            write(pd, test, strlen(test)-1);
+            write(pd, test, strlen(test));
             write(pd, &newl, 1);
             close(pd);
             chdir("..");
@@ -547,7 +547,7 @@ void blockuser(char test[], int address){
             chdir(tmp);
             int pd = open(result, O_WRONLY);
             lseek(pd, 0, SEEK_END);
-            write(pd, test, strlen(test)-1);
+            write(pd, test, strlen(test));
             write(pd, &newl, 1);
             close(pd);
             chdir("..");
@@ -588,8 +588,7 @@ void getmsg(char text[], int num, int address){ //synchroniczne
     char name[50];
     char reed[256];
     int whatread = 0;
-    while((counter2 < num) && !(c == '\0')){
-        read(pd, &c, 1);
+    while((counter2 < num) && (read(pd, &c, 1) > 0)){
         if(c == '&'){
             whatread = 1; //czuytamy imie
         }
@@ -648,7 +647,7 @@ void givenames(int address){
     int notdone = 1;
     int counter = 0;
     int name = 0;
-    while(notdone){
+    while(notdone && (read(pd, &c, 1)>0)){
         read(pd, &c, 1);
         if(c == '\n'){
             if(name){
@@ -669,21 +668,19 @@ void givenames(int address){
                 memset(reader, '\0', sizeof(reader));
             }
         }
-        else if(c == '\0'){
-            reader[counter] = '\0';
-            snd.type = 15;
-            snd.num = 0;
-            strcpy(snd.text, reader);
-            int send = msgget(address, 0666 | IPC_CREAT);
-            msgsnd(send, &snd, sizeof(snd), 0);
-            msgctl(send, IPC_RMID, NULL);
-            close(pd);
-        }
         else{
             reader[counter] = c;
             counter++;
         }
     }
+    reader[counter] = '\0';
+    snd.type = 15;
+    snd.num = 0;
+    strcpy(snd.text, reader);
+    int send = msgget(address, 0666 | IPC_CREAT);
+    msgsnd(send, &snd, sizeof(snd), 0);
+    msgctl(send, IPC_RMID, NULL);
+    close(pd);
     printf("user list sent\n");
 }
 void givetopics(int address){
@@ -695,8 +692,7 @@ void givetopics(int address){
     char c;
     int notdone = 1;
     int counter = 0;
-    while(notdone){
-        read(pd, &c, 1);
+    while(notdone && (read(pd, &c, 1) > 0)){
         if(c == '\n'){
             reader[counter] = '\0';
             counter = 0;
@@ -708,20 +704,18 @@ void givetopics(int address){
             msgctl(send, IPC_RMID, NULL);
             memset(reader, '\0', sizeof(reader));
         }
-        else if(c == '\0'){
-            snd.type = 16;
-            snd.num = 0;
-            strcpy(snd.text, reader);
-            int send = msgget(address, 0666 | IPC_CREAT);
-            msgsnd(send, &snd, sizeof(snd), 0);
-            msgctl(send, IPC_RMID, NULL);
-            close(pd);
-        }
         else{
             reader[counter] = c;
             counter++;
         }
     }
+    snd.type = 16;
+    snd.num = 0;
+    strcpy(snd.text, reader);
+    int send = msgget(address, 0666 | IPC_CREAT);
+    msgsnd(send, &snd, sizeof(snd), 0);
+    msgctl(send, IPC_RMID, NULL);
+    close(pd);
     printf("topic list sent\n");
 }
 
@@ -764,7 +758,7 @@ int main(int argc, char* argv[]) {
     while(1){
         if (msgrcv(msgid, &rec, sizeof(rec), 0, IPC_NOWAIT) != -1) {
         if(!fork()){
-            printf("Received message. Type: %ld, Address: %d\n", rec.type, rec.address);
+            printf("Received message Type: %ld, Address: %d\n", rec.type, rec.address);
             switch(rec.type){
                 case 1:
                	    printf("received login\n");

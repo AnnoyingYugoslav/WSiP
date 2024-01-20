@@ -29,6 +29,7 @@ struct msgbuf {
 void login(char name[], int pid, int where){
     struct msgbuf snd;
     snd.type = 1;
+    snd.address = pid;
     strcpy(snd.top, name);
     msgsnd(where, &snd, sizeof(snd), 0);
     printf("Sent message. Type: %ld, Address: %d\n", snd.type, snd.address);
@@ -72,55 +73,58 @@ int main(int argc, char* argv[]){
         int msgid = msgget(me+KEY, 0666 | IPC_CREAT);
         while(1){
         	if (msgrcv(msgid, &rec, sizeof(rec), 0, IPC_NOWAIT) != -1) {
-        	printf("RECEIVED A MESSAGE\n");
-        	switch (rec.type) {
-        	    case 1:
-        	       printf("success\n");
-        	       break;
-        	    case 2:
-        	       printf("logout error\n");
-        	       break;
-        	    case 4:
-        	       printf("message added to an existing topic");
-        	       break;
-        	    case 5:
-        	       printf("message added to a new topic");
-        	       break;
-        	    case 6:
-        	       printf("message wasn't added");
-        	       break;
-        	    case 7:
-        	       printf("new topic/ban was added");
-        	       break;
-        	    case 8:
-        	       printf("topic/ban already exists");
-        	       break;
-        	    case 9:
-        	       printf("IDK");
-        	       break;
-            	    case 11:
-                       handleLogoutMessage();
-                       break;
-                    case 12:
-                       printf("received a message");
-                       break;
-                    case 14:
-                       printf("topic/ban creation error");
-                       break;
-                    case 15:
-                       printf("received user list: %s\n", rec.text);
-                       break;
-                    case 16:
-                       if (rec.num == 1){
-                          printf("received topic: %s\n", rec.text);
-                       }
-                       else{
-                          printf("end of topic list: %s\n", rec.text);
-                       }
-                       break;
-            	default:
+                if(!fork()){
+                    printf("RECEIVED A MESSAGE\n");
+                switch (rec.type) {
+                    case 1:
+                    printf("success\n");
                     break;
-                    }
+                    case 2:
+                    printf("logout error\n");
+                    break;
+                    case 4:
+                    printf("message added to an existing topic");
+                    break;
+                    case 5:
+                    printf("message added to a new topic");
+                    break;
+                    case 6:
+                    printf("message wasn't added");
+                    break;
+                    case 7:
+                    printf("new topic/ban was added");
+                    break;
+                    case 8:
+                    printf("topic/ban already exists");
+                    break;
+                    case 9:
+                    printf("IDK");
+                    break;
+                        case 11:
+                        handleLogoutMessage();
+                        break;
+                        case 12:
+                        printf("received a message");
+                        break;
+                        case 14:
+                        printf("topic/ban creation error");
+                        break;
+                        case 15:
+                        printf("received user list: %s\n", rec.text);
+                        break;
+                        case 16:
+                        if (rec.num == 1){
+                            printf("received topic: %s\n", rec.text);
+                        }
+                        else{
+                            printf("end of topic list: %s\n", rec.text);
+                        }
+                        break;
+                    default:
+                        break;
+                        }
+                }
+        	
             }
         }
     }
