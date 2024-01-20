@@ -7,14 +7,30 @@
 #include <sys/ipc.h>
 #include <sys/msg.h>
 #include <sys/types.h>
+#include <unistd.h>
 
 #define KEY 22342
 #define SERVER 1118481
+struct msgbuf1 {
+        long type;
+        char text[256];
+        int num;
+}rec;
+
+struct msgbuf {
+        long type;
+        int address;
+        int pro; //priority
+        char top[50]; //topic or name
+        char text[256];
+}snd;
 
 void login(char name[], int pid, int where){
+    struct msgbuf snd;
     snd.type = 1;
     strcpy(snd.top, name);
     msgsnd(where, &snd, sizeof(snd), 0);
+    printf("Sent message. Type: %ld, Address: %d\n", snd.type, snd.address);
 }
 
 void helpinfo() {
@@ -30,28 +46,20 @@ void helpinfo() {
             "   -6: Podaj listę użytkowników\n"
             "   -7: Podaj listę tematów\n");
 }
-
-struct msgbuf1 {
-        long type;
-        char text[256];
-        int num;
-}rec;
-
-struct msgbuf {
-        long type;
-        int address;
-        int pro; //prioriyty
-        char top[50]; //topic or name
-        char text[256];
-}snd;
+void handleLogoutMessage() {
+    printf("Logout successful.\n");
+    exit(0);
+}
 
 int main(int argc, char* argv[]){
     if(argc < 2){
         printf("Use: ./program [name]");
         return 1;
     }
-    char name[] = argv[1];
+    char name[256];
+    strcpy(name, argv[1]);
     int me = getpid();
+    printf("receiving info from address: %d\n", me);
     me;
     if(SERVER == (me+KEY)){
         printf("Rare error, restart program");
@@ -60,7 +68,20 @@ int main(int argc, char* argv[]){
     if(fork()){ //nasluch
         int msgid = msgget(me, 0666 | IPC_CREAT);
         while(1){
-            //czytak rzeczy, które dostałeś na msgid -> jak dostaniesz login fail lub error, wywal
+        	if (msgrcv(msgid, &rec, sizeof(rec), 0, IPC_NOWAIT) != -1) {
+        	printf("RECEIVED A MESSAGE");
+        	switch (rec.type) {
+        	    case 1:
+        	       printf("success\n");
+        	    case 2:
+        	       printf("error\n");
+            	    case 11:
+                       handleLogoutMessage();
+                       break;
+            	default:
+                    break;
+                    }
+            }
         }
     }
     else{ //wysylanie
@@ -76,13 +97,19 @@ int main(int argc, char* argv[]){
             printf("Podaj numer polecenia do wykonania:\n ");
             fgets(input, sizeof(input), stdin);
             sscanf(input, "%d", &n);
+            input[strcspn(input, "\n")] = '\0';
             switch(n){
                 case 1:
                 {
                     printf("Sent the request to logout.\n");
                     snd.type = 2;
                     strcpy(snd.top, name);
-                    msgsnd(sndmsg, &snd, sizeof(snd), 0);
+                    if (msgsnd(sndmsg, &snd, sizeof(snd), 0) == -1) {
+                	perror("msgsnd");
+            	    } else {
+                	printf("Message sent successfully.\n");
+                    }	
+                    break;
                 }
                 case 2:
                 {
@@ -100,6 +127,7 @@ int main(int argc, char* argv[]){
                     strcpy(snd.top, inputshort);
                     strcpy(snd.text, inputlong);
                     msgsnd(sndmsg, &snd, sizeof(snd), 0);
+                    break;
                 }
                 case 3:
                 {
@@ -110,6 +138,7 @@ int main(int argc, char* argv[]){
                     strcpy(snd.top, inputshort);
                     msgsnd(sndmsg, &snd, sizeof(snd), 0);
                     printf("Wyslano stala subskrypcje.\n");
+                    break;
 
                 }
                 case 4:
@@ -124,6 +153,7 @@ int main(int argc, char* argv[]){
                     strcpy(snd.top, inputshort);
                     msgsnd(sndmsg, &snd, sizeof(snd), 0);
                     printf("Wyslano stala subskrypcje.\n");
+                    break;
                 }
                 case 5:
                 {
@@ -134,22 +164,26 @@ int main(int argc, char* argv[]){
                     strcpy(snd.top, inputshort);
                     msgsnd(sndmsg, &snd, sizeof(snd), 0);
                     printf("Wyslano prosbe o bana.\n");
+                    break;
                 }
                 case 6:
                 {
                     snd.type = 7;
                     msgsnd(sndmsg, &snd, sizeof(snd), 0);
+                    break;
                 }
                 case 7:
                 {
                     snd.type = 8;
                     msgsnd(sndmsg, &snd, sizeof(snd), 0);
+                    break;
 
                 }
                 default:
                 {
                     printf("Unkown command.\n");
                     helpinfo();
+                    break;
                 }
             }
         }
