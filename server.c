@@ -7,10 +7,24 @@
 #include <sys/ipc.h>
 #include <sys/msg.h>
 #include <sys/types.h>
+#include <sys/stat.h>
+#include <errno.h>
 
 #define KEY 22342
+struct msgbuf1 {
+        long type;
+        char text[256];
+        int num;
+}snd;
 
-int search(char text[50], int file) {
+struct msgbuf {
+        long type;
+        int address;
+        int pro; //priority
+        char top[50]; //topic or name
+        char text[256];
+}rec;
+int search(char text[], int file) {
     switch(file) {
         case 1: // patrz, czy jest temat
         {
@@ -76,7 +90,7 @@ int search(char text[50], int file) {
 int substotopic(char who[], char what[]){
     chdir("user");
     const char sub[] = "sub";
-    int subsize = sizeof(sub) + sizeof(who);
+    int subsize = strlen(sub) + strlen(who);
     char result[subsize]; // sub + adress
     strcpy(result, sub);
     strcat(result, who);
@@ -115,7 +129,7 @@ int substotopic(char who[], char what[]){
 int notbanned(char who[], char whom[]){
     chdir("user");
     const char sub[] = "ban";
-    int subsize = sizeof(sub) + sizeof(who);
+    int subsize = strlen(sub) + strlen(who);
     char result[subsize]; // sub + adress
     strcpy(result, sub);
     strcat(result, who);
@@ -167,7 +181,7 @@ void sendtosub(char text[], char name[], char msg[]){ //asynchroniczne
                 address[counter] = '\0';
                 if(substotopic(address, text)){
                     if(notbanned(address, name)){
-                        int smsg = sizeof(text) + sizeof(msg) + 1;
+                        int smsg = strlen(text) + strlen(msg) + 1;
                         char cmplmsg[smsg];
                         strcpy(cmplmsg, name);
                         strcat(cmplmsg, &newl);
@@ -203,6 +217,7 @@ void sendtosub(char text[], char name[], char msg[]){ //asynchroniczne
 
 
 void login(char name[], int address) {
+    struct msgbuf1 snd;
     char buf[30];
     address = address + KEY; //Key - stala duża liczba
     snprintf(buf, sizeof(buf), "%d", address);
@@ -214,7 +229,7 @@ void login(char name[], int address) {
         lseek(pd, 0, SEEK_END);
         write(pd, buf, sizeof(buf)-1);
         write(pd, newline, sizeof(newline)-1);
-        write(pd, name, sizeof(name)-1);
+        write(pd, name, strlen(name)-1);
         write(pd, newline, sizeof(newline)-1);
         close(pd);
         // make new file banname and subname
@@ -246,6 +261,7 @@ void login(char name[], int address) {
 }
 
 void logout(char name[], int address){
+    struct msgbuf1 snd;
     //remove adress and name
     char buf[30];
     address = address + KEY; //Key - stala duża liczba
@@ -261,8 +277,8 @@ void logout(char name[], int address){
         while(notdone){
             read(pd, &c, 1);
             if(c == '\n'){
-                reader[counter] == '\0';
-                if(strcmp(buf, reader)){
+                reader[counter] = '\0';
+                if(strcmp(buf, reader) == 0){
                     notdone = 0;
                 }
                 else{
@@ -271,7 +287,7 @@ void logout(char name[], int address){
                 }
             }
             else if(c == '\0'){
-                printf("Error in logout")
+                printf("Error in logout");
                 snd.type = 2;
                 int send = msgget(address, 0666 | IPC_CREAT);
                 msgsnd(send, &snd, sizeof(snd), 0);
@@ -306,15 +322,19 @@ void logout(char name[], int address){
         remove(result);
         remove(result2);
         snd.type = 11;
+        printf("11\n");
     }
     else{
         snd.type = 2;
+        printf("2\n");
     }
     int send = msgget(address, 0666 | IPC_CREAT);
     msgsnd(send, &snd, sizeof(snd), 0);
+    printf("logout conf sent\n");
     msgctl(send, IPC_RMID, NULL);
 }
 void addtopic(char title[], char text[], int address, int pro){
+    struct msgbuf1 snd;
     char buf[30];
     address = address + KEY; //Key - stala duża liczba
     snprintf(buf, sizeof(buf), "%d", address);
@@ -341,7 +361,7 @@ void addtopic(char title[], char text[], int address, int pro){
                 }
                 else{
                     counter2 = 0;
-                    memset(name, '\0', sizeof(name));
+                    memset(name, '\0', strlen(name));
                 }
             }
             else{
@@ -351,7 +371,7 @@ void addtopic(char title[], char text[], int address, int pro){
         }
         notdone = 1;
         counter2 = 0;
-        memset(name, '\0', sizeof(name));
+        memset(name, '\0', strlen(name));
         while(notdone){
             read(fd, &c, 1);
             if(c == '\n'){
@@ -363,7 +383,7 @@ void addtopic(char title[], char text[], int address, int pro){
             }
         }
         name[counter2] = '\0';
-        if(search(title, 1)){ //jeśli już jest temat
+        if(search(title, 1) == 1){ //jeśli już jest temat
             chdir(tmp);
             int pd = open(title, O_RDWR);
             int notdone = 1;
@@ -397,14 +417,14 @@ void addtopic(char title[], char text[], int address, int pro){
             write(pd, &hash, 1);
             write(pd, buf2, sizeof(buf2)-1);
             write(pd, &app, 1);
-            write(pd, name, sizeof(name)-1);
+            write(pd, name, strlen(name)-1);
             write(pd, &newl, 1);
-            write(pd, text, sizeof(text)-1);
+            write(pd, text, strlen(text)-1);
             write(pd, &newl, 1);
             close(pd);
             chdir("..");
             snd.type = 4;
-            sendtosub(title, name);
+            //DO OGARNIECIA CHYBA sendtosub(title, name);
         }
         else{ //jeśli nie ma
             const char topics[] = "topics";
@@ -413,9 +433,9 @@ void addtopic(char title[], char text[], int address, int pro){
             write(pd, &hash, 1);
             write(pd, buf2, sizeof(buf2)-1);
             write(pd, &app, 1);
-            write(pd, name, sizeof(name)-1);
+            write(pd, name, strlen(name)-1);
             write(pd, &newl, 1);
-            write(pd, text, sizeof(text)-1);
+            write(pd, text, strlen(text)-1);
             write(pd, &newl, 1);
             close(pd);
             snd.type = 5;
@@ -423,7 +443,7 @@ void addtopic(char title[], char text[], int address, int pro){
             //add to list of all topic
             pd = open(topics, O_RDWR);
             lseek(pd, 0, SEEK_END);
-            write(pd, title, sizeof(title) -1);
+            write(pd, title, strlen(title) -1);
             write(pd, &newl, 1);
             close(pd);
         }
@@ -436,6 +456,7 @@ void addtopic(char title[], char text[], int address, int pro){
     msgctl(send, IPC_RMID, NULL);
 }
 void addsub(char test[], int address){
+    struct msgbuf1 snd;
     char buf[30];
     address = address + KEY; //Key - stala duża liczba
     snprintf(buf, sizeof(buf), "%d", address);
@@ -447,11 +468,11 @@ void addsub(char test[], int address){
     strcpy(result, sub);
     strcat(result, buf);
     if(search(buf, 2)){
-        if(serach(test, 1)){
+        if(search(test, 1)){
             chdir(tmp);
             int pd = open(result, O_WRONLY);
             lseek(pd, 0, SEEK_END);
-            write(pd, test, sizeof(test)-1);
+            write(pd, test, strlen(test)-1);
             write(pd, &newl, 1);
             close(pd);
             chdir("..");
@@ -469,6 +490,7 @@ void addsub(char test[], int address){
     msgctl(send, IPC_RMID, NULL);
 }
 void blockuser(char test[], int address){
+    struct msgbuf1 snd;
     char buf[30];
     address = address + KEY; //Key - stala duża liczba
     snprintf(buf, sizeof(buf), "%d", address);
@@ -480,11 +502,11 @@ void blockuser(char test[], int address){
     strcpy(result, sub);
     strcat(result, buf);
     if(search(buf, 2)){
-        if(serach(test, 3)){
+        if(search(test, 3)){
             chdir(tmp);
             int pd = open(result, O_WRONLY);
             lseek(pd, 0, SEEK_END);
-            write(pd, test, sizeof(test)-1);
+            write(pd, test, strlen(test)-1);
             write(pd, &newl, 1);
             close(pd);
             chdir("..");
@@ -502,6 +524,7 @@ void blockuser(char test[], int address){
     msgctl(send, IPC_RMID, NULL);
 }
 void senderr(int address){
+    struct msgbuf1 snd;
     snd.type = 12;
     int send = msgget(address, 0666 | IPC_CREAT);
     msgsnd(send, &snd, sizeof(snd), 0);
@@ -510,6 +533,7 @@ void senderr(int address){
 
 
 void getmsg(char text[], int num, int address){ //synchroniczne
+    struct msgbuf1 snd;
     chdir("text");
     address = address + KEY;
     int pd = open(text, O_RDONLY);
@@ -542,18 +566,18 @@ void getmsg(char text[], int num, int address){ //synchroniczne
                 snd.type = 12;
                 snd.num = 1;
                 strcpy(snd.text, reed);
-                int send = msgget(atoi(address), 0666 | IPC_CREAT);
+                int send = msgget(address, 0666 | IPC_CREAT);
                 msgsnd(send, &snd, sizeof(snd), 0);
                 msgctl(send, IPC_RMID, NULL);
                 counter2++;
                 memset(reed, '\0', sizeof(reed));
             }
-            else if((c == '#' && !(counter2 = num)) || (c == '/0')){
+            else if((c == '#' && !(counter2 == num)) || (c == '\0')){
                 reed[counter] = '\0';
                 snd.type = 12;
                 snd.num = 0;
                 strcpy(snd.text, reed);
-                int send = msgget(atoi(address), 0666 | IPC_CREAT);
+                int send = msgget(address, 0666 | IPC_CREAT);
                 msgsnd(send, &snd, sizeof(snd), 0);
                 msgctl(send, IPC_RMID, NULL);
             }
@@ -568,6 +592,7 @@ void getmsg(char text[], int num, int address){ //synchroniczne
 }
 
 void givenames(int address){
+    struct msgbuf1 snd;
     address = address + KEY;
     const char users[] = "users";
     int pd = open(users, O_RDONLY);
@@ -585,7 +610,7 @@ void givenames(int address){
                 snd.type = 16;
                 snd.num = 1;
                 strcpy(snd.text, reader);
-                int send = msgget(atoi(address), 0666 | IPC_CREAT);
+                int send = msgget(address, 0666 | IPC_CREAT);
                 msgsnd(send, &snd, sizeof(snd), 0);
                 msgctl(send, IPC_RMID, NULL);
                 memset(reader, '\0', sizeof(reader));
@@ -602,7 +627,7 @@ void givenames(int address){
             snd.type = 15;
             snd.num = 0;
             strcpy(snd.text, reader);
-            int send = msgget(atoi(address), 0666 | IPC_CREAT);
+            int send = msgget(address, 0666 | IPC_CREAT);
             msgsnd(send, &snd, sizeof(snd), 0);
             msgctl(send, IPC_RMID, NULL);
             close(pd);
@@ -614,6 +639,7 @@ void givenames(int address){
     }
 }
 void givetopics(int address){
+    struct msgbuf1 snd;
     address = address + KEY;
     const char topics[] = "topics";
     int pd = open(topics, O_RDONLY);
@@ -629,7 +655,7 @@ void givetopics(int address){
             snd.type = 16;
             snd.num = 1;
             strcpy(snd.text, reader);
-            int send = msgget(atoi(address), 0666 | IPC_CREAT);
+            int send = msgget(address, 0666 | IPC_CREAT);
             msgsnd(send, &snd, sizeof(snd), 0);
             msgctl(send, IPC_RMID, NULL);
             memset(reader, '\0', sizeof(reader));
@@ -638,7 +664,7 @@ void givetopics(int address){
             snd.type = 16;
             snd.num = 0;
             strcpy(snd.text, reader);
-            int send = msgget(atoi(address), 0666 | IPC_CREAT);
+            int send = msgget(address, 0666 | IPC_CREAT);
             msgsnd(send, &snd, sizeof(snd), 0);
             msgctl(send, IPC_RMID, NULL);
             close(pd);
@@ -650,29 +676,17 @@ void givetopics(int address){
     }
 }
 
-struct msgbuf1 {
-        long type;
-        char text[256];
-        int num;
-}snd;
 
-struct msgbuf {
-        long type;
-        int address;
-        int pro; //prioriyty
-        char top[50]; //topic or name
-        char text[256];
-}rec;
 int main(int argc, char* argv[]) {
-
     int msgid = msgget(0x111111, 0666 | IPC_CREAT);
+    printf("Message queue ID: %d\n", msgid);
     //generate data structure
     if (mkdir("data", 0777) == -1) {
-        printf("Error creating data folder");
+        fprintf(stderr, "Error creating data folder: %s\n", strerror(errno));
         return 1;
     }
     if (chdir("data") == -1) {
-        printg("Error changing to data directory");
+        printf("Error changing to data directory");
         return 1l;
     }
     if (mkdir("text", 0777) == -1) {
@@ -697,13 +711,16 @@ int main(int argc, char* argv[]) {
         return 1;
     }
     while(1){
-        msgrcv(msgid, &rec, sizeof(rec) - sizeof(long), 0, 0);
+        if (msgrcv(msgid, &rec, sizeof(rec), 0, IPC_NOWAIT) != -1) {
         if(!fork()){
+            printf("Received message. Type: %ld, Address: %d\n", rec.type, rec.address);
             switch(rec.type){
                 case 1:
+               	    printf("received login\n");
                     login(rec.top, rec.address);
                     break;
                 case 2:
+                    printf("received logout\n");
                     logout(rec.top, rec.address);
                     break;
                 case 3:
@@ -727,7 +744,9 @@ int main(int argc, char* argv[]) {
                 default:
                     senderr(rec.address);
             }
+            exit(0);
         }
+    }
     }
 
 
