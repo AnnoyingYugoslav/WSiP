@@ -11,6 +11,12 @@
 #define KEY 22342
 #define SERVER 1118481
 
+void login(char name[], int pid, int where){
+    snd.type = 1;
+    strcpy(snd.top, name);
+    msgsnd(where, &snd, sizeof(snd), 0);
+}
+
 void helpinfo() {
     printf("Jak używać:\n"
             "   -Podaj liczbe polecenia\n"
@@ -51,22 +57,16 @@ int main(int argc, char* argv[]){
         printf("Rare error, restart program");
         return 1;
     }
-    //zaloguj sie
-
-
-
-    //test if zalogowano
-
     if(fork()){ //nasluch
         int msgid = msgget(me, 0666 | IPC_CREAT);
         while(1){
-            //czytak rzeczy, które dostałeś na msgid
+            //czytak rzeczy, które dostałeś na msgid -> jak dostaniesz login fail lub error, wywal
         }
     }
     else{ //wysylanie
         int sndmsg = msgget(SERVER, 0666 | IPC_CREAT);
         helpinfo();
-        login(name, me);
+        login(name, me, sndmsg);
         int n;
         char input[100];
         char inputlong[256];
