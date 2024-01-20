@@ -43,20 +43,37 @@ int search(char text[], int file) {
         }
         case 2: // patrz, czy jest użytkownik - by adress
         {
-            const char ban[] = "ban"; 
-            int size = strlen(text) +strlen(ban);
-            char filename[size];
-            chdir("user");
-            strcpy(filename, ban);
-            strcat(filename, text);
-            int fd = open(filename, O_RDONLY);
-            if (fd == -1) {
-                chdir("..");
-                return 0;
+            const char users[] = "users";
+            int fd = open(users, O_RDONLY);
+            char reader[50];
+            char c;
+            int counter = 0;
+            int timeout = 0;
+            while(timeout < 100000){
+                timeout++;
+                read(fd, &c, 1);
+                if(c == '\0'){
+                    close(fd);
+                    return 0;
+                }
+                else if(c == '\n'){
+                    reader[counter] = '\0';
+                    if(strcmp(reader, text) == 0){
+                        close(fd);
+                        return 1;
+                    }
+                    else{
+                        counter = 0;
+                        memset(reader, '\0', sizeof(reader)); 
+                    }
+                }
+                else{
+                    reader[counter] = c;
+                    counter++;
+                }
             }
             close(fd);
-            chdir("..");
-            return 1;
+            return 0;
         }
         case 3: //patrz, czy jest użytkownik - by name
         {
@@ -278,7 +295,7 @@ void logout(char name[], int address){
     char buf[30];
     address = address + KEY; //Key - stala duża liczba
     snprintf(buf, sizeof(buf), "%d", address);
-    if(search(buf, 2)){
+    if(search(name, 3)){
         const char users[] = "users";
         const char newline[] = "\n";
         int pd = open(users, O_RDWR);
@@ -286,8 +303,8 @@ void logout(char name[], int address){
         int notdone = 1;
         int counter = 0;
         char c;
-        while(notdone){
-            read(pd, &c, 1);
+        while((read(pd, &c, 1) > 0) && notdone){
+            printf("%c", c);
             if(c == '\n'){
                 reader[counter] = '\0';
                 if(strcmp(buf, reader) == 0){
@@ -338,7 +355,7 @@ void logout(char name[], int address){
     }
     else{
         snd.type = 2;
-        printf("logout failed\n");
+        printf("logout failed, but its here\n");
     }
     int send = msgget(address, 0666 | IPC_CREAT);
     msgsnd(send, &snd, sizeof(snd), 0);

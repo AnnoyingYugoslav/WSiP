@@ -156,7 +156,7 @@ int main(int argc, char* argv[]){
                     sscanf(input, "%s", inputshort);
                     printf("Podaj priorytet:\n");
                     fgets(input, sizeof(input), stdin);
-                    sscanf(input, "%d", &snd.pro);
+                    sscanf(input, "%d", &snd.pro); //dodać sprawdzanie, czy liczba
                     printf("Podaj tytul wiadomosci:\n");
                     fgets(inputlong, sizeof(inputlong), stdin);
                     sscanf(inputlong, "%s", inputlong);
