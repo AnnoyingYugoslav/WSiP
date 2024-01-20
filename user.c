@@ -66,17 +66,54 @@ int main(int argc, char* argv[]){
         return 1;
     }
     if(fork()){ //nasluch
-        int msgid = msgget(me, 0666 | IPC_CREAT);
+        int msgid = msgget(me+KEY, 0666 | IPC_CREAT);
         while(1){
         	if (msgrcv(msgid, &rec, sizeof(rec), 0, IPC_NOWAIT) != -1) {
-        	printf("RECEIVED A MESSAGE");
+        	printf("RECEIVED A MESSAGE\n");
         	switch (rec.type) {
         	    case 1:
         	       printf("success\n");
+        	       break;
         	    case 2:
-        	       printf("error\n");
+        	       printf("logout error\n");
+        	       break;
+        	    case 4:
+        	       printf("message added to an existing topic");
+        	       break;
+        	    case 5:
+        	       printf("message added to a new topic");
+        	       break;
+        	    case 6:
+        	       printf("message wasn't added");
+        	       break;
+        	    case 7:
+        	       printf("new topic/ban was added");
+        	       break;
+        	    case 8:
+        	       printf("topic/ban already exists");
+        	       break;
+        	    case 9:
+        	       printf("IDK");
+        	       break;
             	    case 11:
                        handleLogoutMessage();
+                       break;
+                    case 12:
+                       printf("received a message");
+                       break;
+                    case 14:
+                       printf("topic/ban creation error");
+                       break;
+                    case 15:
+                       printf("received user list: %s\n", rec.text);
+                       break;
+                    case 16:
+                       if (rec.num == 1){
+                          printf("received topic: %s\n", rec.text);
+                       }
+                       else{
+                          printf("end of topic list: %s\n", rec.text);
+                       }
                        break;
             	default:
                     break;
@@ -144,7 +181,7 @@ int main(int argc, char* argv[]){
                 case 4:
                 {
                     snd.type = 4;
-                    printf("Podaj temat do zasubowania na stale:\n");
+                    printf("Podaj temat do otrzymania wiadomosci:\n");
                     fgets(input, sizeof(input), stdin);
                     sscanf(input, "%s", inputshort);
                     printf("Podaj ile wiadomosci chcesz:\n");
@@ -152,7 +189,7 @@ int main(int argc, char* argv[]){
                     sscanf(input, "%d", &snd.pro);
                     strcpy(snd.top, inputshort);
                     msgsnd(sndmsg, &snd, sizeof(snd), 0);
-                    printf("Wyslano stala subskrypcje.\n");
+                    printf("przeslano wiadomosci.\n");
                     break;
                 }
                 case 5:
