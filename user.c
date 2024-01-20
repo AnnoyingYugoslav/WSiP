@@ -60,7 +60,7 @@ int main(int argc, char* argv[]){
     if(fork()){ //nasluch
         int msgid = msgget(me, 0666 | IPC_CREAT);
         while(1){
-
+            //czytak rzeczy, które dostałeś na msgid
         }
     }
     else{ //wysylanie
@@ -72,29 +72,68 @@ int main(int argc, char* argv[]){
         char inputlong[256];
         char inputshort[50];
         while(1){
-            printf("Podaj numer polecenia do wykonania: ");
+            snd.address = me;
+            printf("Podaj numer polecenia do wykonania:\n ");
             fgets(input, sizeof(input), stdin);
             sscanf(input, "%d", &n);
             switch(n){
                 case 1:
                 {
+                    printf("Sent the request to logout.\n");
                     snd.type = 2;
+                    strcpy(snd.top, name);
+                    msgsnd(sndmsg, &snd, sizeof(snd), 0);
                 }
                 case 2:
                 {
                     snd.type = 3;
+                    printf("Podaj tytul wiadomosci:\n");
+                    fgets(input, sizeof(input), stdin);
+                    sscanf(input, "%s", inputshort);
+                    printf("Podaj priorytet:\n");
+                    fgets(input, sizeof(input), stdin);
+                    sscanf(input, "%d", &snd.pro);
+                    printf("Podaj tytul wiadomosci:\n");
+                    fgets(inputlong, sizeof(inputlong), stdin);
+                    sscanf(inputlong, "%s", inputlong);
+                    printf("Wyslano wiadomosc.\n");
+                    strcpy(snd.top, inputshort);
+                    strcpy(snd.text, inputlong);
+                    msgsnd(sndmsg, &snd, sizeof(snd), 0);
                 }
                 case 3:
                 {
                     snd.type = 5;
+                    printf("Podaj temat do zasubowania na stale:\n");
+                    fgets(input, sizeof(input), stdin);
+                    sscanf(input, "%s", inputshort);
+                    strcpy(snd.top, inputshort);
+                    msgsnd(sndmsg, &snd, sizeof(snd), 0);
+                    printf("Wyslano stala subskrypcje.\n");
+
                 }
                 case 4:
                 {
                     snd.type = 4;
+                    printf("Podaj temat do zasubowania na stale:\n");
+                    fgets(input, sizeof(input), stdin);
+                    sscanf(input, "%s", inputshort);
+                    printf("Podaj ile wiadomosci chcesz:\n");
+                    fgets(input, sizeof(input), stdin);
+                    sscanf(input, "%d", &snd.pro);
+                    strcpy(snd.top, inputshort);
+                    msgsnd(sndmsg, &snd, sizeof(snd), 0);
+                    printf("Wyslano stala subskrypcje.\n");
                 }
                 case 5:
                 {
                     snd.type = 6;
+                    printf("Podaj kogo chesz zbanowac:\n");
+                    fgets(input, sizeof(input), stdin);
+                    sscanf(input, "%s", inputshort);
+                    strcpy(snd.top, inputshort);
+                    msgsnd(sndmsg, &snd, sizeof(snd), 0);
+                    printf("Wyslano prosbe o bana.\n");
                 }
                 case 6:
                 {
