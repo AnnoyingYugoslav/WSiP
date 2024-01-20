@@ -24,6 +24,7 @@ struct msgbuf {
         char top[50]; //topic or name
         char text[256];
 }rec;
+
 int search(char text[], int file) {
     switch(file) {
         case 1: // patrz, czy jest temat
@@ -49,16 +50,16 @@ int search(char text[], int file) {
             char c;
             int counter = 0;
             int timeout = 0;
-            while(timeout < 100000){
-                timeout++;
+            while(read(fd, &c, 1) > 0){
                 read(fd, &c, 1);
+                timeout++;
                 if(c == '\0'){
                     close(fd);
                     return 0;
                 }
                 else if(c == '\n'){
                     reader[counter] = '\0';
-                    if(strcmp(reader, text) == 0){
+                    if(strstr(reader, text) != NULL){
                         close(fd);
                         return 1;
                     }
@@ -83,16 +84,15 @@ int search(char text[], int file) {
             char c;
             int counter = 0;
             int timeout = 0;
-            while(timeout < 100000){
+            while(read(fd, &c, 1) > 0){
                 timeout++;
-                read(fd, &c, 1);
                 if(c == '\0'){
                     close(fd);
                     return 0;
                 }
                 else if(c == '\n'){
                     reader[counter] = '\0';
-                    if(strcmp(reader, text) == 0){
+                    if(strstr(reader, text) != NULL){
                         close(fd);
                         return 1;
                     }
@@ -297,17 +297,23 @@ void logout(char name[], int address){
     snprintf(buf, sizeof(buf), "%d", address);
     if(search(name, 3)){
         const char users[] = "users";
+        const char tempusers[] = "temp";
         const char newline[] = "\n";
         int pd = open(users, O_RDWR);
+        int pd2 = creat(tempusers, 0777);
         char reader[50];
+        memset(reader, '\0', sizeof(reader));
         int notdone = 1;
         int counter = 0;
+        int counter2 = 0;
         char c;
         while((read(pd, &c, 1) > 0) && notdone){
             printf("%c", c);
             if(c == '\n'){
+                counter2++;
                 reader[counter] = '\0';
-                if(strcmp(buf, reader) == 0){
+                if(strstr(name, reader) != NULL){
+                    printf("THE GOLDEN ARC\n");
                     notdone = 0;
                 }
                 else{
@@ -315,28 +321,28 @@ void logout(char name[], int address){
                     memset(reader, '\0', sizeof(reader));
                 }
             }
-            else if(c == '\0'){
-                printf("Error in logout");
-                snd.type = 2;
-                int send = msgget(address, 0666 | IPC_CREAT);
-                msgsnd(send, &snd, sizeof(snd), 0);
-                msgctl(send, IPC_RMID, NULL);
-                return;
-            }
             else{
                 reader[counter] = c;
                 counter++;
+                counter2++;
             }
         }
-        lseek(pd, -counter, SEEK_CUR);
-        const char emp[] = "";
-        for(int i = 0; i < counter; i++){
-            write(pd, emp, 1);
+        close(pd);
+        pd = open(users, O_RDONLY);
+        for(int i = 0; i < (counter2 - (strlen(buf) + strlen(name) + 2)); i++){
+            read(pd, &c, 1);
+            write(pd2, &c, 1);
+            printf("%c", c);
         }
-        for(int i = 0; i < (strlen(name) + 1); i++){
-            write(pd, emp, 1);
+        lseek(pd, (strlen(buf) + strlen(name) + 2), SEEK_CUR);
+        while(read(pd, &c, 1) > 0){
+            write(pd2, &c, 1);
+            printf("%c", c);
         }
         close(pd);
+        close(pd2);
+        remove(users);
+        rename(tempusers, users);
         chdir("user");
         const char sub[] = "sub";
         const char ban[] = "ban";
@@ -743,12 +749,10 @@ int main(int argc, char* argv[]) {
     int pd;
     char users[] = "users";
     pd = creat(users, 0777);
-    const char newl = '\n';
     if(pd == -1){
         printf("Error creating list of users");
         return 1;
     }
-    write(pd, &newl, 1);
     close(pd);
     char topics[] = "topics";
     pd = creat(topics, 0777);
@@ -756,7 +760,6 @@ int main(int argc, char* argv[]) {
         printf("Error creating list of topics");
         return 1;
     }
-    write(pd, &newl, 1);
     close(pd);
     while(1){
         if (msgrcv(msgid, &rec, sizeof(rec), 0, IPC_NOWAIT) != -1) {

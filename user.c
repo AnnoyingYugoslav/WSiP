@@ -4,6 +4,7 @@
 #include <fcntl.h>
 #include <string.h>
 #include <unistd.h>
+#include <signal.h>
 #include <sys/ipc.h>
 #include <sys/msg.h>
 #include <sys/types.h>
@@ -48,6 +49,8 @@ void helpinfo() {
 }
 void handleLogoutMessage() {
     printf("Logout successful.\n");
+    int parpid = getppid();
+    kill(parpid, SIGTERM);
     exit(0);
 }
 
@@ -65,7 +68,7 @@ int main(int argc, char* argv[]){
         printf("Rare error, restart program");
         return 1;
     }
-    if(fork()){ //nasluch
+    if(!fork()){ //nasluch
         int msgid = msgget(me+KEY, 0666 | IPC_CREAT);
         while(1){
         	if (msgrcv(msgid, &rec, sizeof(rec), 0, IPC_NOWAIT) != -1) {
