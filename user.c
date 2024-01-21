@@ -72,6 +72,7 @@ int main(int argc, char* argv[]){
     if(!fork()){ //nasluch
         int msgid = msgget(me+KEY, 0666 | IPC_CREAT);
         while(1){
+            msgid = msgget(me+KEY, 0666 | IPC_CREAT);
         	if (msgrcv(msgid, &rec, sizeof(rec), 0, IPC_NOWAIT) != -1) {
                 if(!fork()){
                     printf("RECEIVED A MESSAGE\n");
