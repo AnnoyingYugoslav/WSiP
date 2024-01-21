@@ -765,51 +765,43 @@ void givetopics(int address){
 
 
 int main(int argc, char* argv[]) {
+    if (system("rm -r data") == -1){
+    	printf("Error removing data folder");
+    }
     int msgid = msgget(0x111111, 0666 | IPC_CREAT);
     printf("Message queue ID: %d\n", msgid);
     //generate data structure
-    struct stat st;
-    if (stat("data", &st) == -1){
     if (mkdir("data", 0777) == -1) {
         fprintf(stderr, "Error creating data folder: %s\n", strerror(errno));
         return 1;
-    }
     }
     if (chdir("data") == -1) {
         printf("Error changing to data directory");
         return 1l;
     }
-    if (stat("text", &st) == -1){
     if (mkdir("text", 0777) == -1) {
         printf("Error creating text folder");
         return 1;
     }
-    }
-    if (stat("user", &st) == -1){
     if (mkdir("user", 0777) == -1) {
         printf("Error creating user folder");
         return 1;
     }
-    }
     int pd;
     char users[] = "users";
-    if (stat(users, &st) == -1){
     pd = creat(users, 0777);
     if(pd == -1){
         printf("Error creating list of users");
         return 1;
     }
     close(pd);
-    }
     char topics[] = "topics";
-    if (stat(topics, &st) == -1){
     pd = creat(topics, 0777);
     if(pd == -1){
         printf("Error creating list of topics");
         return 1;
     }
     close(pd);
-    }
     while(1){
         if (msgrcv(msgid, &rec, sizeof(rec), 0, IPC_NOWAIT) != -1) {
         if(!fork()){
