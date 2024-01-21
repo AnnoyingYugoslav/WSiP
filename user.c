@@ -75,7 +75,7 @@ int main(int argc, char* argv[]){
             msgid = msgget(me+KEY, 0666 | IPC_CREAT);
         	if (msgrcv(msgid, &rec, sizeof(rec), 0, IPC_NOWAIT) != -1) {
                 if(!fork()){
-                    printf("RECEIVED A MESSAGE\n");
+                    //printf("RECEIVED A MESSAGE of type: %ld\n", rec.type);
                 switch (rec.type) {
                     case 1:
                     printf("success\n");
@@ -84,34 +84,36 @@ int main(int argc, char* argv[]){
                     printf("logout error\n");
                     break;
                     case 4:
-                    printf("message added to an existing topic");
+                    printf("message added to an existing topic\n");
                     break;
                     case 5:
-                    printf("message added to a new topic");
+                    printf("message added to a new topic\n");
                     break;
                     case 6:
-                    printf("message wasn't added");
+                    printf("message wasn't added\n");
                     break;
                     case 7:
-                    printf("new topic/ban was added");
+                    printf("new topic/ban was added\n");
                     break;
                     case 8:
-                    printf("topic/ban already exists");
+                    printf("topic/ban already exists\n");
                     break;
                     case 9:
                     printf("IDK");
                     break;
                         case 11:
-                        handleLogoutMessage();
+                        printf("Logout successful\n");
+                        exit(0);
                         break;
                         case 12:
-                        printf("received a message");
+                        printf("received a message\n");
+                        printf("%s", rec.text);
                         break;
                         case 14:
-                        printf("topic/ban creation error");
+                        printf("topic/ban creation error\n");
                         break;
                         case 15:
-                        printf("received user list: %s\n", rec.text);
+                        printf("end of user list");
                         break;
                         case 16:
                         if (rec.num == 1){
@@ -120,10 +122,13 @@ int main(int argc, char* argv[]){
                         else{
                             printf("end of topic list: %s\n", rec.text);
                         }
+                        case 17:
+                        printf("user: %s\n", rec.text);
                         break;
                     default:
                         break;
                         }
+                        exit(0);
                 }
         	
             }
@@ -149,17 +154,14 @@ int main(int argc, char* argv[]){
                     printf("Sent the request to logout.\n");
                     snd.type = 2;
                     strcpy(snd.top, name);
-                    if (msgsnd(sndmsg, &snd, sizeof(snd), 0) == -1) {
-                	perror("msgsnd");
-            	    } else {
-                	printf("Message sent successfully.\n");
-                    }	
+                    msgsnd(sndmsg, &snd, sizeof(snd), 0);
+                    exit(0);
                     break;
                 }
                 case 2:
                 {
                     snd.type = 3;
-                    printf("Podaj tytul wiadomosci:\n");
+                    printf("Podaj temat wiadomosci:\n");
                     fgets(input, sizeof(input), stdin);
                     sscanf(input, "%s", inputshort);
                     printf("Podaj priorytet:\n");
@@ -197,7 +199,7 @@ int main(int argc, char* argv[]){
                     sscanf(input, "%d", &snd.pro);
                     strcpy(snd.top, inputshort);
                     msgsnd(sndmsg, &snd, sizeof(snd), 0);
-                    printf("przeslano wiadomosci.\n");
+                    printf("przeslano prosbe o wiadomosc.\n");
                     break;
                 }
                 case 5:
