@@ -381,6 +381,7 @@ void addtopic(char title[], char text[], int address, int pro){
     char buf2[30];
     const char tmp[] = "text";
     const char users[] = "users";
+    const char temp[] = "tmp"; //dodać jako zakazany!!!!
     snprintf(buf2, sizeof(buf2), "%d", pro);
     if(search(buf, 2)){
         //get name
@@ -421,19 +422,27 @@ void addtopic(char title[], char text[], int address, int pro){
         name[counter2] = '\0';
         if(search(title, 1) == 1){ //jeśli już jest temat
             chdir(tmp);
-            int pd = open(title, O_RDWR);
+            int pd = open(title, O_RDONLY);
             int notdone = 1;
             char c;
             char reader[50];
-            int counter;
+            memset(reader, '\0', sizeof(reader));
+            int counter = 0;
+            int counter2 = 0;
             int foundnumber = 0;
             while(notdone && read(pd, &c, 1) > 0){
-                if(foundnumber && !(c == '\n')){
+                counter2++;
+                if(foundnumber == 1){
                     reader[counter] = c;
                     counter++;
                 }
-                else{
+                if(c == '#'){
+                    foundnumber = 1;
+                }
+                else if(c == '&'){
+                    counter--;
                     reader[counter] = '\0';
+                    printf("\n\npacz:\n%s\n", reader);
                     foundnumber = atoi(reader);
                     if(foundnumber >= pro){
                         notdone = 0;
@@ -443,21 +452,42 @@ void addtopic(char title[], char text[], int address, int pro){
                         counter = 0;
                         memset(reader, '\0', sizeof(reader));
                     }
-                }
-                if(c == '#'){
-                    foundnumber = 1;
-                }
+
+                } 
             }
-            lseek(pd, -(counter+1), SEEK_CUR);
-            write(pd, hash, strlen(hash));
-            write(pd, buf2, strlen(buf2));
-            write(pd, app, strlen(app));
-            write(pd, name, strlen(name));
-            write(pd, newl, strlen(newl));
-            write(pd, text, strlen(text));
-            write(pd, newl, strlen(newl));
+            printf("\n\n%d", counter);
+            int ile = counter + 2;
             close(pd);
+            pd = open(title, O_RDONLY);
+            int pd2 = creat(temp, 0777);
+            close(pd2);
+            pd2 = open(temp, O_WRONLY);
+            for(int i = 0; i < (counter2 - counter - 2); i++){
+                read(pd, &c, 1);
+                write(pd2, &c, 1);
+            }
+            write(pd2, newl, strlen(newl));
+            write(pd2, hash, strlen(hash));
+            write(pd2, buf2, strlen(buf2));
+            write(pd2, app, strlen(app));
+            write(pd2, name, strlen(name));
+            write(pd2, newl, strlen(newl));
+            write(pd2, text, strlen(text));
+            write(pd2, newl, strlen(newl));
+
+            while(read(pd, &c, 1) > 0){
+                write(pd2, &c, 1);
+            }
+
+            printf("message added succesfully\n");
+
+            close(pd);
+            close(pd2);
+            remove(title);
+            rename(temp, title);
+
             chdir("..");
+            printf("closed file succesfully\n");
             snd.type = 4;
             printf("message added succesfully");
             sendtosub(title, name, text);
@@ -466,6 +496,7 @@ void addtopic(char title[], char text[], int address, int pro){
             const char topics[] = "topics";
             chdir(tmp);
             int pd = creat(title, 0777);
+            write(pd, newl, strlen(newl));
             write(pd, hash, strlen(hash));
             write(pd, buf2, strlen(buf2));
             write(pd, app, strlen(app));
