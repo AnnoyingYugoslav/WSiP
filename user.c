@@ -78,10 +78,10 @@ int main(int argc, char* argv[]){
                     //printf("RECEIVED A MESSAGE of type: %ld\n", rec.type);
                 switch (rec.type) {
                     case 1:
-                    printf("success\n");
+                    printf("success\n"); //udalo sie zalogowac
                     break;
                     case 2:
-                    printf("logout error\n");
+                    printf("logout error\n"); //wylogowanie nie poszlo
                     break;
                     case 4:
                     printf("message added to an existing topic\n");
@@ -93,34 +93,41 @@ int main(int argc, char* argv[]){
                     printf("message wasn't added\n");
                     break;
                     case 7:
-                    printf("new topic/ban was added\n");
+                    printf("new subsciption/ban was added\n");
                     break;
                     case 8:
-                    printf("topic/ban already exists\n");
+                    printf("subscription/ban not possible - thing doesnt exist\n");
                     break;
-                    case 9:
-                    printf("IDK");
+                    case 9:{
+                    printf("Login failed, username taken!\n");
+                    int parpid = getppid();
+                    kill(parpid, SIGTERM);
+                    exit(0);
                     break;
+                    }
                         case 11:
                         printf("Logout successful\n");
                         exit(0);
                         break;
                         case 12:
-                        printf("received a message\n");
-                        printf("%s", rec.text);
+                        printf("received a message in subbed topic\n");
+                        printf("%s\n", rec.text);
                         break;
                         case 14:
-                        printf("topic/ban creation error\n");
+                        printf("subscryption/ban creation error\n");
                         break;
                         case 15:
                         printf("end of user list");
                         break;
                         case 16:
+                        {
                         if (rec.num == 1){
                             printf("received topic: %s\n", rec.text);
                         }
                         else{
                             printf("end of topic list: %s\n", rec.text);
+                        }
+                        break;
                         }
                         case 17:
                         printf("user: %s\n", rec.text);

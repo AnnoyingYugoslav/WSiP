@@ -129,9 +129,12 @@ int substotopic(char who[], char what[]){
     strcpy(result, sub);
     strcat(result, who);
     int pd = open(result, O_RDONLY);
+    if(pd == -1){
+        printf("Couldnt open: %s\n", who);
+    }
     char reed[50];
     char c;
-    int counter = 1;
+    int counter = 0;
     while(read(pd, &c, 1) > 0){
         read(pd, &c, 1);
         if(c == '\n'){
@@ -163,14 +166,17 @@ int notbanned(char who[], char whom[]){
     strcpy(result, sub);
     strcat(result, who);
     int pd = open(result, O_RDONLY);
+    if(pd == -1){
+        printf("Didnt open\n");
+    }
     char reed[50];
     char c;
-    int counter = 1;
-    while(1){
+    int counter = 0;
+    while(read(pd, &c, 1) > 0){
         read(pd, &c, 1);
         if(c == '\n'){
             reed[counter] = '\0';
-            if(strcmp(whom, reed) == 0){
+            if(strstr(whom, reed) != NULL){
                 close(pd);
                 chdir("..");
                 return 0;
@@ -179,11 +185,6 @@ int notbanned(char who[], char whom[]){
                 counter = 0;
                 memset(reed, '\0', sizeof(reed));
             }
-        }
-        else if(c == '\0'){
-            close(pd);
-            chdir("..");
-            return 1;
         }
         else{
             reed[counter] = c;
@@ -206,11 +207,18 @@ void sendtosub(char text[], char name[], char msg[]){ //asynchroniczne
     const char newl = '\n';
     while(notdone){
         int a = read(pd, &c, 1);
-        if(c == '\n'){
+        if(a == 0){
+            close(pd);
+            return;
+        }
+        else if(c == '\n'){
             if(switcher){
                 address[counter] = '\0';
+                printf("Found person!: %s\n", address);
                 if(substotopic(address, text)){
+                    printf("He subs!: %s\n", address);
                     if(notbanned(address, name)){
+                        printf("He didnt ban: %s\n", name);
                         int smsg = strlen(text) + strlen(msg) + 1;
                         char cmplmsg[smsg];
                         strcpy(cmplmsg, name);
@@ -234,10 +242,6 @@ void sendtosub(char text[], char name[], char msg[]){ //asynchroniczne
                 memset(address, '\0', sizeof(address));
                 switcher = 1;
             }
-        }
-        else if(a == 0){
-            close(pd);
-            return;
         }
         else{
             address[counter] = c;
@@ -286,7 +290,7 @@ void login(char name[], int address) {
         close(file);
         chdir("..");
     } else {
-        snd.type = 2;
+        snd.type = 9;
         printf("login failed");
     }
     int send = msgget(address, 0666 | IPC_CREAT);
@@ -468,7 +472,7 @@ void addtopic(char title[], char text[], int address, int pro){
                 read(pd, &c, 1);
                 write(pd2, &c, 1);
             }
-            //write(pd2, newl, strlen(newl));
+            write(pd2, newl, strlen(newl));
             write(pd2, hash, strlen(hash));
             write(pd2, buf2, strlen(buf2));
             write(pd2, app, strlen(app));
@@ -504,6 +508,7 @@ void addtopic(char title[], char text[], int address, int pro){
             write(pd, name, strlen(name));
             write(pd, newl, strlen(newl));
             write(pd, text, strlen(text));
+            write(pd, newl, strlen(newl));
             write(pd, newl, strlen(newl));
             close(pd);
             snd.type = 5;
@@ -642,7 +647,7 @@ void getmsg(char text[], int num, int address){ //synchroniczne
             }
         }
         if(whatread == 2){
-            if(c == '#' && !(counter2 != num)){ // koniec tego tematu
+            if(c == '#' && (counter2 != num)){ // koniec tego tematu
                 reed[counter] = '\0';
                 counter = 0;
                 snd.type = 12;
@@ -654,10 +659,10 @@ void getmsg(char text[], int num, int address){ //synchroniczne
                 msgctl(send, IPC_RMID, NULL);
                 counter2++;
                 printf("Przeczytane imie: %s\n", name);
-    		printf("Przeczytana tresc: %s\n", reed);
+    		    printf("Przeczytana tresc: %s\n", reed);
                 memset(reed, '\0', sizeof(reed));
             }
-            else if((c == '#' && !(counter2 == num)) || (a == 0)){
+            else if(a == 0){
                 reed[counter] = '\0';
                 snd.type = 12;
                 printf("message sent 2\n");
@@ -666,9 +671,11 @@ void getmsg(char text[], int num, int address){ //synchroniczne
                 int send = msgget(address, 0666 | IPC_CREAT);
                 counter2++;
                 printf("Przeczytane imie: %s\n", name);
-    		printf("Przeczytana tresc: %s\n", reed);
+    		    printf("Przeczytana tresc: %s\n", reed);
                 msgsnd(send, &snd, sizeof(snd), 0);
                 msgctl(send, IPC_RMID, NULL);
+                close(pd);
+                chdir("..");
             }
             else{
                 reed[counter] = c;
